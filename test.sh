@@ -20,11 +20,11 @@ if [ -z "$(ls -la $save_path 2>/dev/null | grep image_adapter_)" ]; then
     echo "Using original CLIP model for inference."
 fi
 
-# 定义数据集数组
-declare -a dataset=(MVTec BTAD MPDD Brain Liver Retina Colon_clinicDB Colon_colonDB Colon_Kvasir Colon_cvc300 VisA MVTec2)
+# 定义数据集（使用空格分隔的字符串，兼容 sh）
+datasets="MVTec BTAD MPDD Brain Liver Retina Colon_clinicDB Colon_colonDB Colon_Kvasir Colon_cvc300 VisA MVTec2"
 
 # 循环测试每个数据集
-for i in "${dataset[@]}"; do
+for i in $datasets; do
     echo "Testing $i..."
     # 运行测试命令
     python test.py --save_path $save_path --dataset $i

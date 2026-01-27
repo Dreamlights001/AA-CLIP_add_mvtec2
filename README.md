@@ -240,7 +240,7 @@ Both test scripts support direct inference without training. If no checkpoint fi
 
 **Note:** While direct inference is convenient, using a trained model with adapters will typically yield better results, especially for specific datasets with unique anomaly patterns.
 
-##### 5.7.3 Usage
+##### 5.7.4 Usage
 
 ###### Python Script
 
@@ -255,7 +255,7 @@ chmod +x test.sh
 ./test.sh
 ```
 
-##### 5.7.4 Parameters
+##### 5.7.5 Parameters
 
 ###### Python Script
 
@@ -268,7 +268,7 @@ chmod +x test.sh
 - Uses `./ckpt` as the default checkpoint path
 - Saves results to `./results` directory
 
-##### 5.7.5 Example
+##### 5.7.6 Example
 
 ###### Python Script
 
@@ -283,7 +283,7 @@ chmod +x test.sh
 ./test.sh
 ```
 
-##### 5.7.6 Results
+##### 5.7.7 Results
 
 ###### Python Script
 
