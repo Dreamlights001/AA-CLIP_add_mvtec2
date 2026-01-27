@@ -11,6 +11,14 @@ import torch
 
 from .model import build_model_from_openai_state_dict, convert_weights_to_lp, get_cast_dtype
 
+# Try to import OpenCLIP library
+try:
+    import open_clip
+    OPENCLIP_AVAILABLE = True
+except ImportError:
+    OPENCLIP_AVAILABLE = False
+    warnings.warn("OpenCLIP library not available. Install it with 'pip install open_clip_torch'")
+
 __all__ = ["list_openai_models", "load_openai_model"]
 
 
@@ -217,6 +225,35 @@ def load_openai_model(
             except Exception as e3:
                 print(f"Failed to load model with existing state_dict: {e3}")
             
+            # Approach 4: Try using OpenCLIP library
+            print("\nApproach 4: Trying OpenCLIP library...")
+            try:
+                if OPENCLIP_AVAILABLE:
+                    print("Using OpenCLIP library to load model...")
+                    # Try to load the model using OpenCLIP
+                    # First, save the state_dict to a temporary file
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix='.pt', delete=False) as tmp:
+                        torch.save(state_dict, tmp.name)
+                        tmp_path = tmp.name
+                    
+                    # Try loading with OpenCLIP
+                    model, _, preprocess = open_clip.create_model_and_transforms(
+                        "ViT-L-14-336",
+                        pretrained=tmp_path,
+                        precision=precision,
+                        device=device
+                    )
+                    
+                    # Clean up temporary file
+                    os.unlink(tmp_path)
+                    
+                    print("Successfully loaded model using OpenCLIP library")
+                else:
+                    print("OpenCLIP library not available, skipping...")
+            except Exception as e4:
+                print(f"Failed to load model using OpenCLIP library: {e4}")
+            
             # If all approaches fail, raise detailed error
             error_msg = "\n" + "="*80
             error_msg += "\nERROR: Failed to load model file"
@@ -229,7 +266,8 @@ def load_openai_model(
             error_msg += "\nPossible solutions:\n"
             error_msg += "1. Ensure you're using an OpenAI format CLIP model\n"
             error_msg += "2. Run 'python download_model.py' to download the correct model\n"
-            error_msg += "3. Check if the model file is corrupted\n"
+            error_msg += "3. Install OpenCLIP library with 'pip install open_clip_torch'\n"
+            error_msg += "4. Check if the model file is corrupted\n"
             error_msg += "\n" + "="*80
             raise RuntimeError(error_msg)
 
