@@ -1,17 +1,17 @@
 BASE_PATH = "/root/autodl-tmp/datasets"
 DATA_PATH = {
-    "Brain": f"{BASE_PATH}/data/MedAD/Brain_AD",
-    "Liver": f"{BASE_PATH}/data/MedAD/Liver_AD",
-    "Retina": f"{BASE_PATH}/data/MedAD/Retina_RESC_AD",
-    "Colon_clinicDB": f"{BASE_PATH}/data/Colon/CVC-ClinicDB",
-    "Colon_colonDB": f"{BASE_PATH}/data/Colon/CVC-ColonDB",
-    "Colon_cvc300": f"{BASE_PATH}/data/Colon/CVC-300",
-    "Colon_Kvasir": f"{BASE_PATH}/data/Colon/Kvasir",
-    "BTAD": f"{BASE_PATH}/data/BTech_Dataset_transformed",
-    "MPDD": f"{BASE_PATH}/data/MPDD",
-    "MVTec": f"{BASE_PATH}/data/mvtec_ad",
-    "VisA": f"{BASE_PATH}/data/VisA_20220922",
-    "MVTec2": f"{BASE_PATH}/MVTec2",
+    "Brain": f"{BASE_PATH}/brainmri",
+    "Liver": f"{BASE_PATH}/liver",
+    "Retina": f"{BASE_PATH}/retina",
+    "Colon_clinicDB": f"{BASE_PATH}/CVC-ClinicDB",
+    "Colon_colonDB": f"{BASE_PATH}/CVC-ColonDB",
+    "Colon_cvc300": f"{BASE_PATH}/CVC-300",
+    "Colon_Kvasir": f"{BASE_PATH}/Kvasir",
+    "BTAD": f"{BASE_PATH}/btad",
+    "MPDD": f"{BASE_PATH}/mpdd",
+    "MVTec": f"{BASE_PATH}/mvtec",
+    "VisA": f"{BASE_PATH}/visa",
+    "MVTec2": f"{BASE_PATH}/mvtec2",
 }
 
 CLASS_NAMES = {
