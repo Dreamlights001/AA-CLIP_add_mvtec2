@@ -185,26 +185,27 @@ def main():
         logger.info("WARNING: Image adapter checkpoint not found!")
         logger.info("Using original CLIP model for inference.")
         logger.info("============================================================")
-        # ========================================================
-        # load dataset
-        kwargs = {"num_workers": 4, "pin_memory": True} if use_cuda else {}
-        image_datasets = get_dataset(
-            args.dataset,
-            args.img_size,
-            None,
-            args.shot,
-            "test",
-            logger=logger,
-        )
-        with torch.no_grad():
-            if adapt_text:
-                text_embeddings = get_adapted_text_embedding(
-                    model, args.dataset, device
-                )
-            else:
-                text_embeddings = get_adapted_text_embedding(
-                    clip_model, args.dataset, device
-                )
+
+    # ========================================================        
+    # load dataset
+    kwargs = {"num_workers": 4, "pin_memory": True} if use_cuda else {}
+    image_datasets = get_dataset(
+        args.dataset,
+        args.img_size,
+        None,
+        args.shot,
+        "test",
+        logger=logger,
+    )
+    with torch.no_grad():
+        if adapt_text:
+            text_embeddings = get_adapted_text_embedding(
+                model, args.dataset, device
+            )
+        else:
+            text_embeddings = get_adapted_text_embedding(
+                clip_model, args.dataset, device
+            )
         # ========================================================
         df = DataFrame(
             columns=[

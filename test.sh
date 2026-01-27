@@ -6,20 +6,18 @@ mkdir -p ./results
 # 设置 checkpoint 路径
 save_path="./ckpt"
 
-# 检查 checkpoint 目录是否存在
+# 检查 checkpoint 目录是否存在，如果不存在则创建
 if [ ! -d "$save_path" ]; then
-    echo "Error: Checkpoint directory $save_path does not exist!"
-    echo "Please train the model first before testing."
-    echo "Training command example: python train.py --save_path $save_path --dataset MVTec2 --shot 0"
-    exit 1
+    echo "Warning: Checkpoint directory $save_path does not exist!"
+    echo "Creating checkpoint directory..."
+    mkdir -p "$save_path"
+    echo "Using original CLIP model for inference."
 fi
 
 # 检查是否存在 image adapter checkpoint 文件
-if [ -z "$(ls -la $save_path | grep image_adapter_)" ]; then
-    echo "Error: Image adapter checkpoint files not found in $save_path!"
-    echo "Please train the model first before testing."
-    echo "Training command example: python train.py --save_path $save_path --dataset MVTec2 --shot 0"
-    exit 1
+if [ -z "$(ls -la $save_path 2>/dev/null | grep image_adapter_)" ]; then
+    echo "Warning: Image adapter checkpoint files not found in $save_path!"
+    echo "Using original CLIP model for inference."
 fi
 
 # 定义数据集数组

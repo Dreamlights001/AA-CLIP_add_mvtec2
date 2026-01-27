@@ -175,7 +175,7 @@ cat ckpt/mvtec2/test.log
 
 #### 5.7 Automatic Testing for All Datasets
 
-We provide two scripts to automatically test all datasets (including the newly added MVTec2) and save the results to a `results` directory.
+We provide two scripts to automatically test all datasets (including the newly added MVTec2) and save the results to a `results` directory. Both scripts support direct inference without training, using the original CLIP model if no checkpoint is found.
 
 ##### 5.7.1 Python Script (Recommended)
 
@@ -193,11 +193,25 @@ We also provide a bash script `test.sh` that follows the same structure as the o
 # 创建 results 目录
 mkdir -p ./results
 
-# 定义数据集数组
-declare -a dataset=(MVTec BTAD MPDD Brain Liver Retina Colon_clinicDB Colon_colonDB Colon_Kvasir Colon_cvc300 VisA MVTec2)
-
 # 设置 checkpoint 路径
 save_path="./ckpt"
+
+# 检查 checkpoint 目录是否存在，如果不存在则创建
+if [ ! -d "$save_path" ]; then
+    echo "Warning: Checkpoint directory $save_path does not exist!"
+    echo "Creating checkpoint directory..."
+    mkdir -p "$save_path"
+    echo "Using original CLIP model for inference."
+fi
+
+# 检查是否存在 image adapter checkpoint 文件
+if [ -z "$(ls -la $save_path 2>/dev/null | grep image_adapter_)" ]; then
+    echo "Warning: Image adapter checkpoint files not found in $save_path!"
+    echo "Using original CLIP model for inference."
+fi
+
+# 定义数据集数组
+declare -a dataset=(MVTec BTAD MPDD Brain Liver Retina Colon_clinicDB Colon_colonDB Colon_Kvasir Colon_cvc300 VisA MVTec2)
 
 # 循环测试每个数据集
 for i in "${dataset[@]}"; do
@@ -213,6 +227,18 @@ done
 
 echo "All tests completed!"
 ```
+
+##### 5.7.3 Direct Inference Mode
+
+Both test scripts support direct inference without training. If no checkpoint files are found, the scripts will automatically use the original CLIP model for inference. This allows you to test any dataset without needing to train the model first.
+
+**Advantages of direct inference:**
+- No need to train the model on each dataset
+- Faster testing process
+- Can test datasets that haven't been trained on
+- Useful for quick evaluation and benchmarking
+
+**Note:** While direct inference is convenient, using a trained model with adapters will typically yield better results, especially for specific datasets with unique anomaly patterns.
 
 ##### 5.7.3 Usage
 
