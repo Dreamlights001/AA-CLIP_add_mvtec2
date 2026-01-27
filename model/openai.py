@@ -77,103 +77,145 @@ def load_openai_model(
         # Try different approaches to build the model
         try:
             model = build_model_from_openai_state_dict(state_dict or model.state_dict(), cast_dtype=cast_dtype)
+            print("Successfully loaded model in OpenAI format")
         except KeyError as e:
             print(f"\nError occurred: {e}")
             print("Trying different model formats...")
             
-            # Approach 1: Check if it's a Hugging Face format model
-            if any(k.startswith("text_model.") for k in state_dict.keys()) or "visual_projection.weight" in state_dict:
-                print("Detected Hugging Face format CLIP model")
+            # Approach 1: Try Hugging Face format conversion first
+            print("\nApproach 1: Trying Hugging Face format conversion...")
+            try:
+                print("Converting Hugging Face format to OpenAI format...")
                 # Convert Hugging Face format to OpenAI format
                 sd = {}
                 for k, v in state_dict.items():
                     # Handle text part conversion
                     if k.startswith("text_model."):
                         # Convert text_model.xxx to OpenAI format
-                        if k.startswith("text_model.embeddings.token_embedding.weight"):
+                        if k == "text_model.embeddings.token_embedding.weight":
                             sd["token_embedding.weight"] = v
-                        elif k.startswith("text_model.embeddings.position_embedding.weight"):
+                        elif k == "text_model.embeddings.position_embedding.weight":
                             sd["positional_embedding"] = v
-                        elif k.startswith("text_model.encoder.layers."):
+                        elif k == "text_model.final_layer_norm.weight":
+                            sd["ln_final.weight"] = v
+                        elif k == "text_model.final_layer_norm.bias":
+                            sd["ln_final.bias"] = v
+                        elif k == "text_model.text_projection.weight":
+                            sd["text_projection"] = v
+                        elif "text_model.encoder.layers." in k:
                             # Convert transformer layers
                             layer_parts = k.split(".")
-                            layer_idx = layer_parts[3]
-                            layer_type = layer_parts[4]
-                            
-                            if layer_type == "self_attn":
-                                # Convert attention layers
-                                if "k_proj" in k:
-                                    sd[f"transformer.resblocks.{layer_idx}.attn.in_proj_weight"] = v
-                                elif "v_proj" in k:
-                                    # Skip, we'll concatenate later
-                                    pass
-                                elif "q_proj" in k:
-                                    # Skip, we'll concatenate later
-                                    pass
-                                elif "out_proj" in k:
-                                    sd[f"transformer.resblocks.{layer_idx}.attn.out_proj.weight"] = v
-                            elif layer_type == "layer_norm1":
-                                sd[f"transformer.resblocks.{layer_idx}.ln_1.weight"] = v
-                            elif layer_type == "mlp":
-                                if "fc1" in k:
-                                    sd[f"transformer.resblocks.{layer_idx}.mlp.c_fc.weight"] = v
-                                elif "fc2" in k:
-                                    sd[f"transformer.resblocks.{layer_idx}.mlp.c_proj.weight"] = v
-                            elif layer_type == "layer_norm2":
-                                sd[f"transformer.resblocks.{layer_idx}.ln_2.weight"] = v
+                            if len(layer_parts) >= 5:
+                                layer_idx = layer_parts[3]
+                                layer_type = layer_parts[4]
+                                
+                                if layer_type == "self_attn":
+                                    # Convert attention layers
+                                    if "k_proj.weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.attn.in_proj_weight"] = v
+                                    elif "v_proj.weight" in k:
+                                        # Skip, we'll handle this differently
+                                        pass
+                                    elif "q_proj.weight" in k:
+                                        # Skip, we'll handle this differently
+                                        pass
+                                    elif "out_proj.weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.attn.out_proj.weight"] = v
+                                    elif "k_proj.bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.attn.in_proj_bias"] = v
+                                    elif "v_proj.bias" in k:
+                                        # Skip
+                                        pass
+                                    elif "q_proj.bias" in k:
+                                        # Skip
+                                        pass
+                                    elif "out_proj.bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.attn.out_proj_bias"] = v
+                                elif layer_type == "layer_norm1":
+                                    if "weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.ln_1.weight"] = v
+                                    elif "bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.ln_1.bias"] = v
+                                elif layer_type == "mlp":
+                                    if "fc1.weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.mlp.c_fc.weight"] = v
+                                    elif "fc1.bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.mlp.c_fc.bias"] = v
+                                    elif "fc2.weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.mlp.c_proj.weight"] = v
+                                    elif "fc2.bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.mlp.c_proj.bias"] = v
+                                elif layer_type == "layer_norm2":
+                                    if "weight" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.ln_2.weight"] = v
+                                    elif "bias" in k:
+                                        sd[f"transformer.resblocks.{layer_idx}.ln_2.bias"] = v
                     # Handle visual part conversion
                     elif k == "visual_projection.weight":
                         sd["visual.proj"] = v
                     # Handle other keys
                     elif k == "logit_scale":
                         sd[k] = v
+                
+                # Print conversion details for debugging
+                print(f"Converted {len(sd)} keys from Hugging Face format to OpenAI format")
+                print("First 10 converted keys:")
+                for i, key in enumerate(list(sd.keys())[:10]):
+                    print(f"  {i}: {key}")
+                
                 # Try building model with converted state dict
-                try:
-                    model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
-                    print("Successfully converted Hugging Face format to OpenAI format")
-                except Exception as e2:
-                    print(f"Failed to convert Hugging Face format: {e2}")
-                    # Print more details for debugging
-                    print("Converted state dict keys:")
-                    for i, key in enumerate(list(sd.keys())[:20]):
-                        print(f"  {i}: {key}")
+                model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+                print("Successfully converted Hugging Face format to OpenAI format")
+            except Exception as e2:
+                print(f"Failed to convert Hugging Face format: {e2}")
             
-            # Approach 2: Handle nested state_dict
-            elif "state_dict" in state_dict:
-                print("Detected nested state_dict format")
-                sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-                try:
+            # Approach 2: Try nested state_dict format
+            print("\nApproach 2: Trying nested state_dict format...")
+            try:
+                if "state_dict" in state_dict:
+                    print("Detected nested state_dict format")
+                    sd = {}
+                    for k, v in state_dict["state_dict"].items():
+                        if k.startswith("module."):
+                            sd[k[7:]] = v
+                        else:
+                            sd[k] = v
+                    
+                    # Print conversion details for debugging
+                    print(f"Extracted {len(sd)} keys from nested state_dict")
+                    print("First 10 extracted keys:")
+                    for i, key in enumerate(list(sd.keys())[:10]):
+                        print(f"  {i}: {key}")
+                    
                     model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
                     print("Successfully loaded nested state_dict format")
-                except Exception as e2:
-                    print(f"Failed to load nested state_dict format: {e2}")
+                else:
+                    print("No nested state_dict found")
+            except Exception as e2:
+                print(f"Failed to load nested state_dict format: {e2}")
             
-            # Approach 3: Check if it's already in OpenAI format but with different structure
-            elif any(k.startswith("visual.") for k in state_dict.keys()):
-                print("Detected OpenAI format but with different structure")
-                try:
-                    # Try to build model with existing state_dict
-                    model = build_model_from_openai_state_dict(state_dict, cast_dtype=cast_dtype)
-                    print("Successfully loaded OpenAI format model")
-                except Exception as e2:
-                    print(f"Failed to load OpenAI format model: {e2}")
-            
-            # Approach 4: Try to detect model type based on available keys
-            print("Trying to detect model type based on available keys...")
-            
-            # Check for ViT-specific keys
-            if any(k.endswith(".conv1.weight") for k in state_dict.keys()):
-                print("Detected ViT model structure")
-            elif any(k.endswith(".layer1.0.conv1.weight") for k in state_dict.keys()):
-                print("Detected ResNet model structure")
-            else:
-                print("Could not detect model structure")
-            
-            # Print all visual-related keys for debugging
-            print("Visual-related keys:")
-            for k in state_dict.keys():
-                if "visual" in k or "conv" in k:
-                    print(f"  {k}")
+            # Approach 3: Try to detect model type based on available keys
+            print("\nApproach 3: Trying model type detection...")
+            try:
+                # Check for ViT-specific keys
+                if any(k.endswith(".conv1.weight") for k in state_dict.keys()):
+                    print("Detected ViT model structure")
+                elif any(k.endswith(".layer1.0.conv1.weight") for k in state_dict.keys()):
+                    print("Detected ResNet model structure")
+                else:
+                    print("Could not detect model structure")
+                
+                # Print all visual-related keys for debugging
+                print("Visual-related keys:")
+                for k in state_dict.keys():
+                    if "visual" in k or "conv" in k or "projection" in k:
+                        print(f"  {k}")
+                
+                # Try to build model with existing state_dict again
+                model = build_model_from_openai_state_dict(state_dict, cast_dtype=cast_dtype)
+                print("Successfully loaded model with existing state_dict")
+            except Exception as e3:
+                print(f"Failed to load model with existing state_dict: {e3}")
             
             # If all approaches fail, raise detailed error
             error_msg = "\n" + "="*80
@@ -186,7 +228,7 @@ def load_openai_model(
                 error_msg += f"  {i}: {key}\n"
             error_msg += "\nPossible solutions:\n"
             error_msg += "1. Ensure you're using an OpenAI format CLIP model\n"
-            error_msg += "2. Try downloading the model from a different source\n"
+            error_msg += "2. Run 'python download_model.py' to download the correct model\n"
             error_msg += "3. Check if the model file is corrupted\n"
             error_msg += "\n" + "="*80
             raise RuntimeError(error_msg)
