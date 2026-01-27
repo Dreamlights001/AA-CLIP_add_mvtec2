@@ -61,6 +61,118 @@ Training results are saved in the directory specified by ``--save_path`` paramet
 
 These files are essential for model evaluation, inference, and resuming training if needed.
 
+### 5. Testing Phase
+
+#### 5.1 Testing Command Format
+
+```bash
+python test.py --dataset <dataset_name> --save_path <model_save_path> [other parameters]
+```
+
+#### 5.2 Main Parameters
+
+- ``--dataset``: Dataset name (required), supports all configured datasets including the newly added ``MVTec2``
+- ``--save_path``: Model save path (required), pointing to the checkpoint directory saved during training
+- ``--model_name``: Model name, default is ``ViT-L-14-336``
+- ``--img_size``: Image size, default is ``518``
+- ``--batch_size``: Batch size, default is ``32``
+- ``--visualize``: Whether to visualize test results
+
+#### 5.3 Testing All Datasets
+
+##### 5.3.1 Testing MVTec Dataset
+```bash
+python test.py --dataset MVTec --save_path ckpt/baseline
+```
+
+##### 5.3.2 Testing VisA Dataset
+```bash
+python test.py --dataset VisA --save_path ckpt/baseline
+```
+
+##### 5.3.3 Testing MPDD Dataset
+```bash
+python test.py --dataset MPDD --save_path ckpt/baseline
+```
+
+##### 5.3.4 Testing BTAD Dataset
+```bash
+python test.py --dataset BTAD --save_path ckpt/baseline
+```
+
+##### 5.3.5 Testing Brain Dataset
+```bash
+python test.py --dataset Brain --save_path ckpt/baseline
+```
+
+##### 5.3.6 Testing Liver Dataset
+```bash
+python test.py --dataset Liver --save_path ckpt/baseline
+```
+
+##### 5.3.7 Testing Retina Dataset
+```bash
+python test.py --dataset Retina --save_path ckpt/baseline
+```
+
+##### 5.3.8 Testing Colon-related Datasets
+```bash
+# CVC-ClinicDB
+python test.py --dataset Colon_clinicDB --save_path ckpt/baseline
+
+# CVC-ColonDB
+python test.py --dataset Colon_colonDB --save_path ckpt/baseline
+
+# CVC-300
+python test.py --dataset Colon_cvc300 --save_path ckpt/baseline
+
+# Kvasir
+python test.py --dataset Colon_Kvasir --save_path ckpt/baseline
+```
+
+##### 5.3.9 Testing the Newly Added MVTec2 Dataset
+```bash
+python test.py --dataset MVTec2 --save_path ckpt/baseline
+```
+
+#### 5.4 Test Results
+
+After testing, the following files will be generated in the ``--save_path`` directory:
+
+- ``test.log``: Test process log with detailed evaluation metrics
+- (Optional) Visualization results: If using the ``--visualize`` parameter, visualization images of test results will be generated
+
+##### 5.4.1 Evaluation Metrics
+
+The test script calculates the following evaluation metrics:
+
+- **pixel AUC**: Pixel-level anomaly detection AUC value
+- **pixel AP**: Pixel-level anomaly detection AP value
+- **image AUC**: Image-level anomaly detection AUC value
+- **image AP**: Image-level anomaly detection AP value
+
+These metrics are calculated per class and an average is generated.
+
+#### 5.5 Notes
+
+1. Ensure that the parameters used during training are consistent with those during testing, especially ``--model_name``, ``--img_size``, etc.
+2. Ensure that the ``--save_path`` directory contains the checkpoint files generated during training
+3. When testing the MVTec2 dataset, ensure that the dataset is correctly configured and located in the ``/root/autodl-tmp/datasets/mvtec2`` directory
+4. For large datasets, it is recommended to use a larger ``--batch_size`` to improve testing speed
+
+#### 5.6 Example: Complete Testing Process
+
+```bash
+# 1. Train the model (taking MVTec2 as an example)
+python train.py --dataset MVTec2 --shot 0 --save_path ckpt/mvtec2
+
+# 2. Test the model
+python test.py --dataset MVTec2 --save_path ckpt/mvtec2 --visualize
+
+# 3. View test results
+cat ckpt/mvtec2/test.log
+```
+
 ## Additional Discussion
 (I am writing down my experimental observations and thoughts. In this part, it is less formal and rigorous.)
 We have observed several interesting phenomenons during our experiments:
