@@ -67,11 +67,23 @@ def load_openai_model(
     if not jit:
         # Build a non-jit model from the OpenAI jitted model state dict
         cast_dtype = get_cast_dtype(precision)
+        # Diagnostic: Print model file structure
+        print("Model file structure:")
+        print(f"Number of keys: {len(state_dict.keys())}")
+        print("First 20 keys:")
+        for i, key in enumerate(list(state_dict.keys())[:20]):
+            print(f"  {i}: {key}")
+        
+        # Try different approaches to build the model
         try:
             model = build_model_from_openai_state_dict(state_dict or model.state_dict(), cast_dtype=cast_dtype)
         except KeyError as e:
-            # Check if it's a Hugging Face format model
-            if "vision." in str(e) or "text." in str(e):
+            print(f"\nError occurred: {e}")
+            print("Trying different model formats...")
+            
+            # Approach 1: Check if it's a Hugging Face format model
+            if any(k.startswith("vision.") for k in state_dict.keys()):
+                print("Detected Hugging Face format model")
                 # Convert Hugging Face format to OpenAI format
                 sd = {}
                 for k, v in state_dict.items():
@@ -87,14 +99,64 @@ def load_openai_model(
                         # These keys are the same in both formats
                         sd[k] = v
                 # Try building model with converted state dict
-                model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+                try:
+                    model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+                    print("Successfully converted Hugging Face format to OpenAI format")
+                except Exception as e2:
+                    print(f"Failed to convert Hugging Face format: {e2}")
+            
+            # Approach 2: Handle nested state_dict
             elif "state_dict" in state_dict:
-                # Handle nested state_dict
+                print("Detected nested state_dict format")
                 sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-                model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+                try:
+                    model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+                    print("Successfully loaded nested state_dict format")
+                except Exception as e2:
+                    print(f"Failed to load nested state_dict format: {e2}")
+            
+            # Approach 3: Check if it's already in OpenAI format but with different structure
+            elif any(k.startswith("visual.") for k in state_dict.keys()):
+                print("Detected OpenAI format but with different structure")
+                try:
+                    # Try to build model with existing state_dict
+                    model = build_model_from_openai_state_dict(state_dict, cast_dtype=cast_dtype)
+                    print("Successfully loaded OpenAI format model")
+                except Exception as e2:
+                    print(f"Failed to load OpenAI format model: {e2}")
+            
+            # Approach 4: Try to detect model type based on available keys
+            print("Trying to detect model type based on available keys...")
+            
+            # Check for ViT-specific keys
+            if any(k.endswith(".conv1.weight") for k in state_dict.keys()):
+                print("Detected ViT model structure")
+            elif any(k.endswith(".layer1.0.conv1.weight") for k in state_dict.keys()):
+                print("Detected ResNet model structure")
             else:
-                # Re-raise the original error if none of the above
-                raise
+                print("Could not detect model structure")
+            
+            # Print all visual-related keys for debugging
+            print("Visual-related keys:")
+            for k in state_dict.keys():
+                if "visual" in k or "conv" in k:
+                    print(f"  {k}")
+            
+            # If all approaches fail, raise detailed error
+            error_msg = "\n" + "="*80
+            error_msg += "\nERROR: Failed to load model file"
+            error_msg += "\n" + "="*80
+            error_msg += "\nModel file structure:\n"
+            error_msg += f"Number of keys: {len(state_dict.keys())}\n"
+            error_msg += "First 20 keys:\n"
+            for i, key in enumerate(list(state_dict.keys())[:20]):
+                error_msg += f"  {i}: {key}\n"
+            error_msg += "\nPossible solutions:\n"
+            error_msg += "1. Ensure you're using an OpenAI format CLIP model\n"
+            error_msg += "2. Try downloading the model from a different source\n"
+            error_msg += "3. Check if the model file is corrupted\n"
+            error_msg += "\n" + "="*80
+            raise RuntimeError(error_msg)
 
         # model from OpenAI state dict is in manually cast fp16 mode, must be converted for AMP/fp32/bf16 use
         model = model.to(device)
