@@ -69,9 +69,32 @@ def load_openai_model(
         cast_dtype = get_cast_dtype(precision)
         try:
             model = build_model_from_openai_state_dict(state_dict or model.state_dict(), cast_dtype=cast_dtype)
-        except KeyError:
-            sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-            model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+        except KeyError as e:
+            # Check if it's a Hugging Face format model
+            if "vision." in str(e) or "text." in str(e):
+                # Convert Hugging Face format to OpenAI format
+                sd = {}
+                for k, v in state_dict.items():
+                    if k.startswith("vision."):
+                        # Remove "vision." prefix to match OpenAI format
+                        new_key = k[7:]
+                        sd[new_key] = v
+                    elif k.startswith("text."):
+                        # For text keys, remove "text." prefix
+                        new_key = k[5:]
+                        sd[new_key] = v
+                    elif k in ["logit_scale", "text_projection"]:
+                        # These keys are the same in both formats
+                        sd[k] = v
+                # Try building model with converted state dict
+                model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+            elif "state_dict" in state_dict:
+                # Handle nested state_dict
+                sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
+                model = build_model_from_openai_state_dict(sd, cast_dtype=cast_dtype)
+            else:
+                # Re-raise the original error if none of the above
+                raise
 
         # model from OpenAI state dict is in manually cast fp16 mode, must be converted for AMP/fp32/bf16 use
         model = model.to(device)
