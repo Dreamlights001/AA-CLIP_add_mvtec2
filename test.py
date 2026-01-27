@@ -170,25 +170,21 @@ def main():
         adapt_text = False
 
     files = sorted(glob(args.save_path + "/image_adapter_*.pth"))
-    if len(files) == 0:
-        error_msg = """============================================================
-ERROR: Image adapter checkpoint not found!
-============================================================
-Please train the model first before testing.
-
-Training command example:
-python train.py --save_path {} --dataset MVTec2 --shot 0
-
-Make sure the checkpoint directory exists and contains the necessary files.
-============================================================""".format(args.save_path)
-        raise AssertionError(error_msg)
-    for file in files:
-        checkpoint = torch.load(file)
-        model.image_adapter.load_state_dict(checkpoint["image_adapter"])
-        test_epoch = checkpoint["epoch"]
-        logger.info("-----------------------------------------------")
-        logger.info("load model from epoch %d", test_epoch)
-        logger.info("-----------------------------------------------")
+    if len(files) > 0:
+        # Load existing checkpoint if available
+        for file in files:
+            checkpoint = torch.load(file)
+            model.image_adapter.load_state_dict(checkpoint["image_adapter"])
+            test_epoch = checkpoint["epoch"]
+            logger.info("-----------------------------------------------")
+            logger.info("load model from epoch %d", test_epoch)
+            logger.info("-----------------------------------------------")
+    else:
+        # Use original CLIP model without adapter if no checkpoint found
+        logger.info("============================================================")
+        logger.info("WARNING: Image adapter checkpoint not found!")
+        logger.info("Using original CLIP model for inference.")
+        logger.info("============================================================")
         # ========================================================
         # load dataset
         kwargs = {"num_workers": 4, "pin_memory": True} if use_cuda else {}
