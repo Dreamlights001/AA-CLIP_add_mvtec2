@@ -173,6 +173,63 @@ python test.py --dataset MVTec2 --save_path ckpt/mvtec2 --visualize
 cat ckpt/mvtec2/test.log
 ```
 
+#### 5.7 Automatic Testing for All Datasets
+
+We provide a script to automatically test all datasets (including the newly added MVTec2) and save the results to a `results` directory.
+
+##### 5.7.1 Usage
+
+```bash
+python test_all_datasets.py --save_path <model_save_path> [--results_dir <results_directory>] [--max_workers <number_of_parallel_tests>]
+```
+
+##### 5.7.2 Parameters
+
+- `--save_path`：Model save path (required), pointing to the checkpoint directory saved during training
+- `--results_dir`：Directory to save test results, default is `results`
+- `--max_workers`：Maximum number of parallel tests, default is `4`
+
+##### 5.7.3 Example
+
+```bash
+python test_all_datasets.py --save_path ckpt/baseline --max_workers 4
+```
+
+##### 5.7.4 Results
+
+After running the script, the following structure will be created in the `results` directory:
+
+```
+results/
+├── summary.txt          # Test summary for all datasets
+├── Brain/
+│   └── test.log         # Test results for Brain dataset
+├── Liver/
+│   └── test.log         # Test results for Liver dataset
+├── Retina/
+│   └── test.log         # Test results for Retina dataset
+├── Colon_clinicDB/
+│   └── test.log         # Test results for Colon_clinicDB dataset
+├── Colon_colonDB/
+│   └── test.log         # Test results for Colon_colonDB dataset
+├── Colon_cvc300/
+│   └── test.log         # Test results for Colon_cvc300 dataset
+├── Colon_Kvasir/
+│   └── test.log         # Test results for Colon_Kvasir dataset
+├── BTAD/
+│   └── test.log         # Test results for BTAD dataset
+├── MPDD/
+│   └── test.log         # Test results for MPDD dataset
+├── MVTec/
+│   └── test.log         # Test results for MVTec dataset
+├── VisA/
+│   └── test.log         # Test results for VisA dataset
+└── MVTec2/
+    └── test.log         # Test results for MVTec2 dataset
+```
+
+The `summary.txt` file contains an overview of all test results, including which datasets passed and failed.
+
 ## Additional Discussion
 (I am writing down my experimental observations and thoughts. In this part, it is less formal and rigorous.)
 We have observed several interesting phenomenons during our experiments:
