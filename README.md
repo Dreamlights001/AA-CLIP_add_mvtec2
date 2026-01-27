@@ -175,27 +175,91 @@ cat ckpt/mvtec2/test.log
 
 #### 5.7 Automatic Testing for All Datasets
 
-We provide a script to automatically test all datasets (including the newly added MVTec2) and save the results to a `results` directory.
+We provide two scripts to automatically test all datasets (including the newly added MVTec2) and save the results to a `results` directory.
 
-##### 5.7.1 Usage
+##### 5.7.1 Python Script (Recommended)
 
 ```bash
 python test_all_datasets.py --save_path <model_save_path> [--results_dir <results_directory>] [--max_workers <number_of_parallel_tests>]
 ```
 
-##### 5.7.2 Parameters
+##### 5.7.2 Bash Script
+
+We also provide a bash script `test.sh` that follows the same structure as the original `scripts.sh` file:
+
+```bash
+#!/bin/bash
+
+# 创建 results 目录
+mkdir -p ./results
+
+# 定义数据集数组
+declare -a dataset=(MVTec BTAD MPDD Brain Liver Retina Colon_clinicDB Colon_colonDB Colon_Kvasir Colon_cvc300 VisA MVTec2)
+
+# 设置 checkpoint 路径
+save_path="./ckpt"
+
+# 循环测试每个数据集
+for i in "${dataset[@]}"; do
+    echo "Testing $i..."
+    # 运行测试命令
+    python test.py --save_path $save_path --dataset $i
+    # 将测试结果复制到 results 目录
+    if [ -f "$save_path/test.log" ]; then
+        cp "$save_path/test.log" "./results/${i}_test.log"
+        echo "Test results for $i saved to ./results/${i}_test.log"
+    fi
+done
+
+echo "All tests completed!"
+```
+
+##### 5.7.3 Usage
+
+###### Python Script
+
+```bash
+python test_all_datasets.py --save_path <model_save_path> [--results_dir <results_directory>] [--max_workers <number_of_parallel_tests>]
+```
+
+###### Bash Script
+
+```bash
+chmod +x test.sh
+./test.sh
+```
+
+##### 5.7.4 Parameters
+
+###### Python Script
 
 - `--save_path`：Model save path (required), pointing to the checkpoint directory saved during training
 - `--results_dir`：Directory to save test results, default is `results`
 - `--max_workers`：Maximum number of parallel tests, default is `4`
 
-##### 5.7.3 Example
+###### Bash Script
+
+- Uses `./ckpt` as the default checkpoint path
+- Saves results to `./results` directory
+
+##### 5.7.5 Example
+
+###### Python Script
 
 ```bash
 python test_all_datasets.py --save_path ckpt/baseline --max_workers 4
 ```
 
-##### 5.7.4 Results
+###### Bash Script
+
+```bash
+chmod +x test.sh
+./test.sh
+```
+
+##### 5.7.6 Results
+
+###### Python Script
 
 After running the script, the following structure will be created in the `results` directory:
 
@@ -228,7 +292,25 @@ results/
     └── test.log         # Test results for MVTec2 dataset
 ```
 
-The `summary.txt` file contains an overview of all test results, including which datasets passed and failed.
+###### Bash Script
+
+After running the script, the following structure will be created in the `results` directory:
+
+```
+results/
+├── MVTec_test.log         # Test results for MVTec dataset
+├── BTAD_test.log          # Test results for BTAD dataset
+├── MPDD_test.log          # Test results for MPDD dataset
+├── Brain_test.log         # Test results for Brain dataset
+├── Liver_test.log         # Test results for Liver dataset
+├── Retina_test.log        # Test results for Retina dataset
+├── Colon_clinicDB_test.log # Test results for Colon_clinicDB dataset
+├── Colon_colonDB_test.log  # Test results for Colon_colonDB dataset
+├── Colon_Kvasir_test.log   # Test results for Colon_Kvasir dataset
+├── Colon_cvc300_test.log   # Test results for Colon_cvc300 dataset
+├── VisA_test.log           # Test results for VisA dataset
+└── MVTec2_test.log         # Test results for MVTec2 dataset
+```
 
 ## Additional Discussion
 (I am writing down my experimental observations and thoughts. In this part, it is less formal and rigorous.)
