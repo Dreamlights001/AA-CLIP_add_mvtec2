@@ -48,6 +48,19 @@ bash scripts.sh
 ```
 Model definition is in ``./model/``. We thank [```open_clip```](https://github.com/mlfoundations/open_clip.git) for being open-source. To run the code, one has to download the weight of OpenCLIP ViT-L-14-336px and put it under ```./model/```.
 
+### 4. Training Results
+Training results are saved in the directory specified by ``--save_path`` parameter (default: ``ckpt/baseline``). The saved files include:
+
+- **Checkpoints**:
+  - ``text_adapter.pth``: Text adapter checkpoint
+  - ``image_adapter.pth``: Latest image adapter checkpoint
+  - ``image_adapter_{epoch}.pth``: Image adapter checkpoint for each epoch
+
+- **Training Log**:
+  - ``train.log``: Training process log with loss values and other metrics
+
+These files are essential for model evaluation, inference, and resuming training if needed.
+
 ## Additional Discussion
 (I am writing down my experimental observations and thoughts. In this part, it is less formal and rigorous.)
 We have observed several interesting phenomenons during our experiments:
