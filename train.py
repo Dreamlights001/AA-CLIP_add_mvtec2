@@ -298,6 +298,10 @@ def main():
     # load dataset
     if args.training_mode == "full_shot":
         args.shot = -1
+    elif args.shot == 0:
+        # Automatically switch to full_shot mode when shot == 0
+        args.training_mode = "full_shot"
+        args.shot = -1
     kwargs = {"num_workers": 4, "pin_memory": True} if use_cuda else {}
     logger.info("loading dataset ...")
     text_dataset, image_dataset = get_dataset(
