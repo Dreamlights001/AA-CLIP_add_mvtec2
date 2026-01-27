@@ -252,8 +252,13 @@ def main():
                 domain=DOMAINS[args.dataset],
             )
             df.loc[len(df)] = Series(class_result_dict)
-        df.loc[len(df)] = df.mean()
-        df.loc[len(df) - 1]["class name"] = "Average"
+        # Calculate mean only for numeric columns, skipping 'class name'
+        numeric_columns = ["pixel AUC", "pixel AP", "image AUC", "image AP"]
+        mean_values = df[numeric_columns].mean()
+        # Create a new row with mean values and set 'class name' to 'Average'
+        mean_row = {"class name": "Average"}
+        mean_row.update(mean_values.to_dict())
+        df.loc[len(df)] = mean_row
         logger.info("final results:\n%s", df.to_string(index=False, justify="center"))
 
 
