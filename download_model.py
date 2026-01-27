@@ -8,8 +8,8 @@ import os
 import requests
 from tqdm import tqdm
 
-# Model download URL
-MODEL_URL = "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/main/pytorch_model.bin"
+# Model download URL - OpenCLIP official source for OpenAI format models
+MODEL_URL = "https://huggingface.co/laion/CLIP-ViT-L-14-336/resolve/main/openai_clip_vit_l_14_336px.pt"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "ViT-L-14-336px.pt")
 
 def download_model():
@@ -45,6 +45,7 @@ def download_model():
     
     print(f"Download completed successfully!")
     print(f"Model saved to: {MODEL_PATH}")
+    print("This is an OpenAI format CLIP model, compatible with AA-CLIP")
 
 if __name__ == "__main__":
     download_model()

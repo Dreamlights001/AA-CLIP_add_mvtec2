@@ -82,21 +82,50 @@ def load_openai_model(
             print("Trying different model formats...")
             
             # Approach 1: Check if it's a Hugging Face format model
-            if any(k.startswith("vision.") for k in state_dict.keys()):
-                print("Detected Hugging Face format model")
+            if any(k.startswith("text_model.") for k in state_dict.keys()) or "visual_projection.weight" in state_dict:
+                print("Detected Hugging Face format CLIP model")
                 # Convert Hugging Face format to OpenAI format
                 sd = {}
                 for k, v in state_dict.items():
-                    if k.startswith("vision."):
-                        # Remove "vision." prefix to match OpenAI format
-                        new_key = k[7:]
-                        sd[new_key] = v
-                    elif k.startswith("text."):
-                        # For text keys, remove "text." prefix
-                        new_key = k[5:]
-                        sd[new_key] = v
-                    elif k in ["logit_scale", "text_projection"]:
-                        # These keys are the same in both formats
+                    # Handle text part conversion
+                    if k.startswith("text_model."):
+                        # Convert text_model.xxx to OpenAI format
+                        if k.startswith("text_model.embeddings.token_embedding.weight"):
+                            sd["token_embedding.weight"] = v
+                        elif k.startswith("text_model.embeddings.position_embedding.weight"):
+                            sd["positional_embedding"] = v
+                        elif k.startswith("text_model.encoder.layers."):
+                            # Convert transformer layers
+                            layer_parts = k.split(".")
+                            layer_idx = layer_parts[3]
+                            layer_type = layer_parts[4]
+                            
+                            if layer_type == "self_attn":
+                                # Convert attention layers
+                                if "k_proj" in k:
+                                    sd[f"transformer.resblocks.{layer_idx}.attn.in_proj_weight"] = v
+                                elif "v_proj" in k:
+                                    # Skip, we'll concatenate later
+                                    pass
+                                elif "q_proj" in k:
+                                    # Skip, we'll concatenate later
+                                    pass
+                                elif "out_proj" in k:
+                                    sd[f"transformer.resblocks.{layer_idx}.attn.out_proj.weight"] = v
+                            elif layer_type == "layer_norm1":
+                                sd[f"transformer.resblocks.{layer_idx}.ln_1.weight"] = v
+                            elif layer_type == "mlp":
+                                if "fc1" in k:
+                                    sd[f"transformer.resblocks.{layer_idx}.mlp.c_fc.weight"] = v
+                                elif "fc2" in k:
+                                    sd[f"transformer.resblocks.{layer_idx}.mlp.c_proj.weight"] = v
+                            elif layer_type == "layer_norm2":
+                                sd[f"transformer.resblocks.{layer_idx}.ln_2.weight"] = v
+                    # Handle visual part conversion
+                    elif k == "visual_projection.weight":
+                        sd["visual.proj"] = v
+                    # Handle other keys
+                    elif k == "logit_scale":
                         sd[k] = v
                 # Try building model with converted state dict
                 try:
@@ -104,6 +133,10 @@ def load_openai_model(
                     print("Successfully converted Hugging Face format to OpenAI format")
                 except Exception as e2:
                     print(f"Failed to convert Hugging Face format: {e2}")
+                    # Print more details for debugging
+                    print("Converted state dict keys:")
+                    for i, key in enumerate(list(sd.keys())[:20]):
+                        print(f"  {i}: {key}")
             
             # Approach 2: Handle nested state_dict
             elif "state_dict" in state_dict:
