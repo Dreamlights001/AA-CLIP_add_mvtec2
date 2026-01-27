@@ -170,7 +170,18 @@ def main():
         adapt_text = False
 
     files = sorted(glob(args.save_path + "/image_adapter_*.pth"))
-    assert len(files) > 0, "image adapter checkpoint not found"
+    if len(files) == 0:
+        error_msg = """============================================================
+ERROR: Image adapter checkpoint not found!
+============================================================
+Please train the model first before testing.
+
+Training command example:
+python train.py --save_path {} --dataset MVTec2 --shot 0
+
+Make sure the checkpoint directory exists and contains the necessary files.
+============================================================""".format(args.save_path)
+        raise AssertionError(error_msg)
     for file in files:
         checkpoint = torch.load(file)
         model.image_adapter.load_state_dict(checkpoint["image_adapter"])
