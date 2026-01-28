@@ -211,6 +211,36 @@ class BaseSingleClassDataset(Dataset):
                     print(f"Info: Using simple filename instead: {simple_path}")
                     return simple_path
             
+            # 对于掩码文件，尝试更多可能的路径
+            if "ground_truth" in original_path:
+                # 尝试直接使用数字命名的掩码文件
+                if "_" in filename:
+                    number_part = filename.split("_")[0]
+                    ext = os.path.splitext(filename)[1]
+                    # 尝试不同的掩码文件命名格式
+                    mask_formats = [
+                        f"{number_part}{ext}",  # 000.png
+                        f"{number_part}.png",    # 000.png
+                        f"{number_part}.jpg",    # 000.jpg
+                        f"{number_part}.bmp",    # 000.bmp
+                    ]
+                    for mask_format in mask_formats:
+                        mask_path = os.path.join(base_dir, mask_format)
+                        if os.path.exists(mask_path) and os.path.isfile(mask_path):
+                            print(f"Info: Using mask filename instead: {mask_path}")
+                            return mask_path
+                
+                # 尝试检查ground_truth目录下的bad子目录
+                bad_dir = os.path.join(base_dir, "bad")
+                if os.path.exists(bad_dir) and os.path.isdir(bad_dir):
+                    bad_files = os.listdir(bad_dir)
+                    bad_file_files = [f for f in bad_files if os.path.isfile(os.path.join(bad_dir, f))]
+                    if bad_file_files:
+                        # 尝试bad目录下的第一个文件
+                        bad_path = os.path.join(bad_dir, bad_file_files[0])
+                        print(f"Info: Using mask file from bad directory: {bad_path}")
+                        return bad_path
+            
             # 尝试其他可能的命名格式
             # 检查目录下是否有任何文件
             if os.path.exists(base_dir) and os.path.isdir(base_dir):
