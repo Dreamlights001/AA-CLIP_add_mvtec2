@@ -194,7 +194,7 @@ class BaseSingleClassDataset(Dataset):
         # 尝试多种可能的文件路径
         def find_file(original_path):
             # 检查原始路径
-            if os.path.exists(original_path):
+            if os.path.exists(original_path) and os.path.isfile(original_path):
                 return original_path
             
             # 尝试不带位姿变换的路径
@@ -207,17 +207,19 @@ class BaseSingleClassDataset(Dataset):
                 ext = os.path.splitext(filename)[1]
                 simple_filename = f"{number_part}{ext}"
                 simple_path = os.path.join(base_dir, simple_filename)
-                if os.path.exists(simple_path):
+                if os.path.exists(simple_path) and os.path.isfile(simple_path):
                     print(f"Info: Using simple filename instead: {simple_path}")
                     return simple_path
             
             # 尝试其他可能的命名格式
             # 检查目录下是否有任何文件
-            if os.path.exists(base_dir):
+            if os.path.exists(base_dir) and os.path.isdir(base_dir):
                 files = os.listdir(base_dir)
-                if files:
+                # 过滤出文件，排除目录
+                file_files = [f for f in files if os.path.isfile(os.path.join(base_dir, f))]
+                if file_files:
                     # 尝试第一个文件
-                    fallback_path = os.path.join(base_dir, files[0])
+                    fallback_path = os.path.join(base_dir, file_files[0])
                     print(f"Info: Using fallback file: {fallback_path}")
                     return fallback_path
             
@@ -225,7 +227,7 @@ class BaseSingleClassDataset(Dataset):
         
         # 查找图像文件
         found_img_path = find_file(img_path)
-        if found_img_path:
+        if found_img_path and os.path.isfile(found_img_path):
             try:
                 # Try to open image file
                 img = Image.open(found_img_path).convert("RGB")
@@ -244,7 +246,7 @@ class BaseSingleClassDataset(Dataset):
             mask_path = os.path.join(self.data_path, meta["mask_path"])
             # 查找掩码文件
             found_mask_path = find_file(mask_path)
-            if found_mask_path:
+            if found_mask_path and os.path.isfile(found_mask_path):
                 try:
                     # Try to open mask file
                     mask = Image.open(found_mask_path).convert("L")
