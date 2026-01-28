@@ -191,39 +191,73 @@ class BaseSingleClassDataset(Dataset):
         meta = self.meta[idx]
         img_path = os.path.join(self.data_path, meta["image_path"])
         
-        # Handle image file not found
-        if not os.path.exists(img_path):
+        # 尝试多种可能的文件路径
+        def find_file(original_path):
+            # 检查原始路径
+            if os.path.exists(original_path):
+                return original_path
+            
+            # 尝试不带位姿变换的路径
+            base_dir = os.path.dirname(original_path)
+            filename = os.path.basename(original_path)
+            
+            # 提取数字部分（如000_overexposed.png -> 000.png）
+            if "_" in filename:
+                number_part = filename.split("_")[0]
+                ext = os.path.splitext(filename)[1]
+                simple_filename = f"{number_part}{ext}"
+                simple_path = os.path.join(base_dir, simple_filename)
+                if os.path.exists(simple_path):
+                    print(f"Info: Using simple filename instead: {simple_path}")
+                    return simple_path
+            
+            # 尝试其他可能的命名格式
+            # 检查目录下是否有任何文件
+            if os.path.exists(base_dir):
+                files = os.listdir(base_dir)
+                if files:
+                    # 尝试第一个文件
+                    fallback_path = os.path.join(base_dir, files[0])
+                    print(f"Info: Using fallback file: {fallback_path}")
+                    return fallback_path
+            
+            return None
+        
+        # 查找图像文件
+        found_img_path = find_file(img_path)
+        if found_img_path:
+            try:
+                # Try to open image file
+                img = Image.open(found_img_path).convert("RGB")
+            except Exception as e:
+                # If any error occurs when opening image file, create a default black image
+                print(f"Warning: Error opening image file {found_img_path}: {e}")
+                img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
+        else:
             # If image file not found, create a default black image
             print(f"Warning: Image file not found: {img_path}")
             img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
-        else:
-            try:
-                # Try to open image file
-                img = Image.open(img_path).convert("RGB")
-            except Exception as e:
-                # If any error occurs when opening image file, create a default black image
-                print(f"Warning: Error opening image file {img_path}: {e}")
-                img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
         
         img = self.transform_x(img)
         
         if meta["label"]:
             mask_path = os.path.join(self.data_path, meta["mask_path"])
-            # Handle mask file not found
-            if not os.path.exists(mask_path):
-                # If mask file not found, create a default zero mask
-                print(f"Warning: Mask file not found: {mask_path}")
-                mask = torch.zeros([1, self.img_size, self.img_size])
-            else:
+            # 查找掩码文件
+            found_mask_path = find_file(mask_path)
+            if found_mask_path:
                 try:
                     # Try to open mask file
-                    mask = Image.open(mask_path).convert("L")
+                    mask = Image.open(found_mask_path).convert("L")
                     mask = self.transform_mask(mask)
                     mask = (mask != 0).float()
                 except Exception as e:
                     # If any error occurs when opening mask file, create a default zero mask
-                    print(f"Warning: Error opening mask file {mask_path}: {e}")
+                    print(f"Warning: Error opening mask file {found_mask_path}: {e}")
                     mask = torch.zeros([1, self.img_size, self.img_size])
+            else:
+                # If mask file not found, create a default zero mask
+                print(f"Warning: Mask file not found: {mask_path}")
+                mask = torch.zeros([1, self.img_size, self.img_size])
         else:
             mask = torch.zeros([1, self.img_size, self.img_size])
         
