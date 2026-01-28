@@ -238,35 +238,59 @@ def metrics_eval(
     class_names: str,
     domain: str,
 ):
-    if pixel_preds.max() != 1:
-        pixel_preds = (pixel_preds - pixel_preds.min()) / (
-            pixel_preds.max() - pixel_preds.min()
-        )
-    if image_preds.max() != 1:
-        image_preds = (image_preds - image_preds.min()) / (
-            image_preds.max() - image_preds.min()
-        )
+    # Check for NaN values in predictions
+    if np.isnan(pixel_preds).any() or np.isnan(image_preds).any():
+        print(f"Warning: NaN values found in predictions for class {class_names}")
+        # Return default values if NaN values are found
+        zero_pixel_auc = 0
+        zero_pixel_ap = 0
+        agg_image_auc = 0
+        agg_image_ap = 0
+        return {
+            "class name": class_names,
+            "pixel AUC": zero_pixel_auc * 100,
+            "pixel AP": zero_pixel_ap * 100,
+            "image AUC": agg_image_auc * 100,
+            "image AP": agg_image_ap * 100,
+        }
+    
+    try:
+        if pixel_preds.max() != 1:
+            pixel_preds = (pixel_preds - pixel_preds.min()) / (
+                pixel_preds.max() - pixel_preds.min()
+            )
+        if image_preds.max() != 1:
+            image_preds = (image_preds - image_preds.min()) / (
+                image_preds.max() - image_preds.min()
+            )
 
-    pmax_pred = pixel_preds.max(axis=(1, 2))
-    if domain != "Medical":
-        image_preds = pmax_pred * 0.5 + image_preds * 0.5
-    else:
-        image_preds = pmax_pred
-    # ================================================================================================
-    # pixel level auc & ap
-    pixel_label = pixel_label.flatten()
-    pixel_preds = pixel_preds.flatten()
+        pmax_pred = pixel_preds.max(axis=(1, 2))
+        if domain != "Medical":
+            image_preds = pmax_pred * 0.5 + image_preds * 0.5
+        else:
+            image_preds = pmax_pred
+        # ================================================================================================
+        # pixel level auc & ap
+        pixel_label = pixel_label.flatten()
+        pixel_preds = pixel_preds.flatten()
 
-    zero_pixel_auc = roc_auc_score(pixel_label, pixel_preds)
-    zero_pixel_ap = average_precision_score(pixel_label, pixel_preds)
-    # ================================================================================================
-    # image level auc & ap
-    if image_label.max() != image_label.min():
-        image_label = image_label.flatten()
-        agg_image_preds = image_preds.flatten()
-        agg_image_auc = roc_auc_score(image_label, agg_image_preds)
-        agg_image_ap = average_precision_score(image_label, agg_image_preds)
-    else:
+        zero_pixel_auc = roc_auc_score(pixel_label, pixel_preds)
+        zero_pixel_ap = average_precision_score(pixel_label, pixel_preds)
+        # ================================================================================================
+        # image level auc & ap
+        if image_label.max() != image_label.min():
+            image_label = image_label.flatten()
+            agg_image_preds = image_preds.flatten()
+            agg_image_auc = roc_auc_score(image_label, agg_image_preds)
+            agg_image_ap = average_precision_score(image_label, agg_image_preds)
+        else:
+            agg_image_auc = 0
+            agg_image_ap = 0
+    except Exception as e:
+        print(f"Warning: Error calculating metrics for class {class_names}: {e}")
+        # Return default values if any error occurs
+        zero_pixel_auc = 0
+        zero_pixel_ap = 0
         agg_image_auc = 0
         agg_image_ap = 0
     # ================================================================================================

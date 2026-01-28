@@ -76,28 +76,39 @@ class BaseDataset(Dataset):
         data_path = self.data_path
         img_path = os.path.join(data_path, meta["image_path"])
         
-        try:
-            # Try to open image file
-            img = Image.open(img_path).convert("RGB")
-        except FileNotFoundError:
-            # If image file not found, return a default image and mask
+        # Handle image file not found
+        if not os.path.exists(img_path):
+            # If image file not found, create a default black image
             print(f"Warning: Image file not found: {img_path}")
-            # Create a default black image
             img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
+        else:
+            try:
+                # Try to open image file
+                img = Image.open(img_path).convert("RGB")
+            except Exception as e:
+                # If any error occurs when opening image file, create a default black image
+                print(f"Warning: Error opening image file {img_path}: {e}")
+                img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
         
         img = self.transform_x(img)
         
         if meta["label"]:
             mask_path = os.path.join(data_path, meta["mask_path"])
-            try:
-                # Try to open mask file
-                mask = Image.open(mask_path).convert("L")
-                mask = self.transform_mask(mask)
-                mask = (mask != 0).float()
-            except FileNotFoundError:
-                # If mask file not found, return a default zero mask
+            # Handle mask file not found
+            if not os.path.exists(mask_path):
+                # If mask file not found, create a default zero mask
                 print(f"Warning: Mask file not found: {mask_path}")
                 mask = torch.zeros([1, self.img_size, self.img_size])
+            else:
+                try:
+                    # Try to open mask file
+                    mask = Image.open(mask_path).convert("L")
+                    mask = self.transform_mask(mask)
+                    mask = (mask != 0).float()
+                except Exception as e:
+                    # If any error occurs when opening mask file, create a default zero mask
+                    print(f"Warning: Error opening mask file {mask_path}: {e}")
+                    mask = torch.zeros([1, self.img_size, self.img_size])
         else:
             mask = torch.zeros([1, self.img_size, self.img_size])
 
@@ -132,11 +143,21 @@ class BaseSingleClassDataset(Dataset):
         self.data_path = data_path
         self.img_size = img_size
         self.meta = []
+        
+        # 确保 meta_path 文件存在
+        if not os.path.exists(meta_path):
+            raise FileNotFoundError(f"Meta file not found: {meta_path}")
+        
+        # 加载元数据
         with open(meta_path, "r") as f:
             for line in f:
                 m = json.loads(line.strip())
                 if m["class_name"] == class_name:
                     self.meta.append(m)
+        
+        # 确保加载到了元数据
+        if not self.meta:
+            raise ValueError(f"No metadata found for class {class_name} in {meta_path}")
 
         # Define transforms
         self.transform_x = transforms.Compose(
@@ -160,6 +181,7 @@ class BaseSingleClassDataset(Dataset):
         if logger:
             logger.info(f"Class name: {class_name}")
             logger.info(f"Sample number: {len(self.meta)}")
+            logger.info(f"First 5 image paths: {[self.meta[i]['image_path'] for i in range(min(5, len(self.meta)))]}")
             logger.info("=====================================")
 
     def __len__(self):
@@ -169,28 +191,39 @@ class BaseSingleClassDataset(Dataset):
         meta = self.meta[idx]
         img_path = os.path.join(self.data_path, meta["image_path"])
         
-        try:
-            # Try to open image file
-            img = Image.open(img_path).convert("RGB")
-        except FileNotFoundError:
-            # If image file not found, return a default image and mask
+        # Handle image file not found
+        if not os.path.exists(img_path):
+            # If image file not found, create a default black image
             print(f"Warning: Image file not found: {img_path}")
-            # Create a default black image
             img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
+        else:
+            try:
+                # Try to open image file
+                img = Image.open(img_path).convert("RGB")
+            except Exception as e:
+                # If any error occurs when opening image file, create a default black image
+                print(f"Warning: Error opening image file {img_path}: {e}")
+                img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
         
         img = self.transform_x(img)
         
         if meta["label"]:
             mask_path = os.path.join(self.data_path, meta["mask_path"])
-            try:
-                # Try to open mask file
-                mask = Image.open(mask_path).convert("L")
-                mask = self.transform_mask(mask)
-                mask = (mask != 0).float()
-            except FileNotFoundError:
-                # If mask file not found, return a default zero mask
+            # Handle mask file not found
+            if not os.path.exists(mask_path):
+                # If mask file not found, create a default zero mask
                 print(f"Warning: Mask file not found: {mask_path}")
                 mask = torch.zeros([1, self.img_size, self.img_size])
+            else:
+                try:
+                    # Try to open mask file
+                    mask = Image.open(mask_path).convert("L")
+                    mask = self.transform_mask(mask)
+                    mask = (mask != 0).float()
+                except Exception as e:
+                    # If any error occurs when opening mask file, create a default zero mask
+                    print(f"Warning: Error opening mask file {mask_path}: {e}")
+                    mask = torch.zeros([1, self.img_size, self.img_size])
         else:
             mask = torch.zeros([1, self.img_size, self.img_size])
         
@@ -234,6 +267,10 @@ def get_dataset(
         return text_dataset, image_dataset
     elif stage == "test":
         meta_path = os.path.join("./dataset/metadata", dataset_name, "full-shot.jsonl")
+        # 确保 meta_path 文件存在
+        if not os.path.exists(meta_path):
+            raise FileNotFoundError(f"Meta file not found: {meta_path}")
+        
         class_names = CLASS_NAMES[dataset_name]
         datasets = {}
         for class_name in class_names:
@@ -249,6 +286,10 @@ def get_dataset(
     elif stage == "visualize":
         class_names = CLASS_NAMES[dataset_name]
         meta_path = os.path.join("./dataset/metadata", dataset_name, "full-shot.jsonl")
+        # 确保 meta_path 文件存在
+        if not os.path.exists(meta_path):
+            raise FileNotFoundError(f"Meta file not found: {meta_path}")
+        
         datasets = {}
         for class_name in class_names:
             image_dataset = BaseSingleClassDataset(
