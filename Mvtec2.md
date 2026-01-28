@@ -157,7 +157,3 @@ MVTec2 数据集可用于以下异常检测任务：
 3. **目录结构**：不同类别的目录结构可能略有差异，需要代码能够适应不同的目录结构
 4. **数据加载**：由于数据集包含大量样本，建议使用批量加载和数据增强技术
 
-## 参考链接
-
-- [MVTec AD 原始数据集](https://www.mvtec.com/company/research/datasets/mvtec-ad/)
-- [AA-CLIP 项目](https://github.com/Mwxinnn/AA-CLIP)
