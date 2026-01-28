@@ -75,14 +75,29 @@ class BaseDataset(Dataset):
         meta = self.meta[idx]
         data_path = self.data_path
         img_path = os.path.join(data_path, meta["image_path"])
-        img = Image.open(img_path).convert("RGB")
-
+        
+        try:
+            # Try to open image file
+            img = Image.open(img_path).convert("RGB")
+        except FileNotFoundError:
+            # If image file not found, return a default image and mask
+            print(f"Warning: Image file not found: {img_path}")
+            # Create a default black image
+            img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
+        
         img = self.transform_x(img)
+        
         if meta["label"]:
             mask_path = os.path.join(data_path, meta["mask_path"])
-            mask = Image.open(mask_path).convert("L")
-            mask = self.transform_mask(mask)
-            mask = (mask != 0).float()
+            try:
+                # Try to open mask file
+                mask = Image.open(mask_path).convert("L")
+                mask = self.transform_mask(mask)
+                mask = (mask != 0).float()
+            except FileNotFoundError:
+                # If mask file not found, return a default zero mask
+                print(f"Warning: Mask file not found: {mask_path}")
+                mask = torch.zeros([1, self.img_size, self.img_size])
         else:
             mask = torch.zeros([1, self.img_size, self.img_size])
 
@@ -153,15 +168,32 @@ class BaseSingleClassDataset(Dataset):
     def __getitem__(self, idx):
         meta = self.meta[idx]
         img_path = os.path.join(self.data_path, meta["image_path"])
-        img = Image.open(img_path).convert("RGB")
+        
+        try:
+            # Try to open image file
+            img = Image.open(img_path).convert("RGB")
+        except FileNotFoundError:
+            # If image file not found, return a default image and mask
+            print(f"Warning: Image file not found: {img_path}")
+            # Create a default black image
+            img = Image.new("RGB", (self.img_size, self.img_size), color=(0, 0, 0))
+        
         img = self.transform_x(img)
+        
         if meta["label"]:
             mask_path = os.path.join(self.data_path, meta["mask_path"])
-            mask = Image.open(mask_path).convert("L")
-            mask = self.transform_mask(mask)
-            mask = (mask != 0).float()
+            try:
+                # Try to open mask file
+                mask = Image.open(mask_path).convert("L")
+                mask = self.transform_mask(mask)
+                mask = (mask != 0).float()
+            except FileNotFoundError:
+                # If mask file not found, return a default zero mask
+                print(f"Warning: Mask file not found: {mask_path}")
+                mask = torch.zeros([1, self.img_size, self.img_size])
         else:
             mask = torch.zeros([1, self.img_size, self.img_size])
+        
         inputs = {
             "image": img,
             "mask": mask,
